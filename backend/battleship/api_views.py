@@ -33,8 +33,7 @@ class CreateRoomView(APIView):
     def post(self, request):
         username = jwt.decode(request.headers.get("Authorization").replace("Bearer: ",""))
         print(username)
-        if ():
-            username = serializer.validated_data['username']
+        if username:
             room_name = uuid.uuid4()  # Generate a random UUID for the room name
             room = GameRoom.objects.create(room_name=room_name, player1=username)
             return Response({"room_name": str(room_name)}, status=status.HTTP_201_CREATED)
