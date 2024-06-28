@@ -10,12 +10,13 @@ SECRET_KEY = 'django-insecure-bg3j^s6&1o66bv7mt&67+)r)t44s7sdbks4x1s=&7x*5e^grk6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1']
+ALLOWED_HOSTS = ['127.0.0.1','localhost']
 
-CORS_ORIGIN_WHITELIST = (
-    'http://127.0.0.1:3000', #per accettare richieste dal frontend React, esposto sulla porta 3000
-)
-
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_HEADERS = [
+    'authorization',
+    'content-type',
+]
 INSTALLED_APPS = [
     'channels',
     'daphne',
@@ -77,13 +78,14 @@ CHANNEL_LAYERS = {
 }
 
 
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
+        'rest_framework.permissions.AllowAny',
+    )
 }
 
 SIMPLE_JWT = {
@@ -92,7 +94,6 @@ SIMPLE_JWT = {
     'SIGNING_KEY': SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-    #add refresh token perhaps?
 }
 
 DATABASES = {
