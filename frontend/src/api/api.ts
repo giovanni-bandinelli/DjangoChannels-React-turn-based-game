@@ -38,7 +38,7 @@ export const guestLogin = async (username: string) => {
 // Function to create a game room
 export const createRoom = async (roomSettings: any, headers: any) => {
     try {
-      const response = await api.post('/create-room/', roomSettings, { headers });
+      const response = await api.post('/create-room/', roomSettings, headers);
       return response.data; 
     } catch (error) {
       throw new Error('Failed to create room.');
@@ -46,9 +46,9 @@ export const createRoom = async (roomSettings: any, headers: any) => {
   };
   
 // Function to join a game room
-export const joinRoom = async (username: string, roomName: string) => {
+export const joinRoom = async (roomName: string, headers: any) => {
   try {
-    const response = await api.post(`/join-room/${roomName}/`, { username });
+    const response = await api.post(`/join-room/${roomName}/`, {}, headers);
     return response.data.message;
   } catch (error) {
     throw new Error('Failed to join room.');

@@ -12,9 +12,8 @@ from .models import GameRoom
 
 class GuestLoginView(APIView):
     def post(self, request):
-        serializer = UsernameSerializer(data=request.data)
-        if serializer.is_valid():
-            username = serializer.validated_data['username']
+        username = request.data.get('username')
+        if username:
             user_uuid = str(uuid.uuid4())
             
             # Create JWT token
@@ -26,24 +25,26 @@ class GuestLoginView(APIView):
             
             return Response({'token': token}, status=status.HTTP_200_OK)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("username required", status=status.HTTP_400_BAD_REQUEST)
 
 class CreateRoomView(APIView):
     
     def post(self, request):
-        username = jwt.decode(request.headers.get("Authorization").replace("Bearer: ",""))
-        print(username)
+        token = request.headers.get("Authorization").replace("Bearer ","")
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms='HS256')
+        username = payload.get('username')
         if username:
             room_name = uuid.uuid4()  # Generate a random UUID for the room name
             room = GameRoom.objects.create(room_name=room_name, player1=username)
             return Response({"room_name": str(room_name)}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("token missing", status=status.HTTP_400_BAD_REQUEST)
 
 class JoinRoomView(APIView):
     def post(self, request, room_name):
-        serializer = UsernameSerializer(data=request.data)
-        if serializer.is_valid():
-            username = serializer.validated_data['username']
+        token = request.headers.get("Authorization").replace("Bearer ","")
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms='HS256')
+        username = payload.get('username')
+        if username:
             try:
                 room = GameRoom.objects.get(room_name=room_name)
                 if room.player2:   # If the room has a second player already, the lobby is full and 3rd/N-th gets error
@@ -54,7 +55,7 @@ class JoinRoomView(APIView):
                 return Response({"message": "Joined room."}, status=status.HTTP_200_OK)
             except GameRoom.DoesNotExist:
                 return Response({"error": "Room does not exist."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("token missing", status=status.HTTP_400_BAD_REQUEST)
 
 class CheckRoomView(APIView):
     def get(self, request, room_name):

@@ -11,14 +11,14 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
         self.room_group_name = self.scope['url_route']['kwargs']['room_id']
         
         #JWT SHOULD BE TAKEN FROM STOEAGE ACTUALLy
-        query_params = self.scope['query_string'].decode()
-        token = query_params.split('=')[1]
+        token = self.scope['url_route']['kwargs']['token']
 
         try:
             # Decode and verify JWT token
-            payload = jwt.decode(token, settings.__getattribute__, algorithms=['HS256'])
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms='HS256')
             self.username = payload['username']
             self.guest_id = payload['guest_id']
+            print(self.username, self.guest_id)
             
             # Add player to the group (room)
             await self.channel_layer.group_add(
@@ -66,7 +66,7 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             {
                 'type': 'chat_message',
-                'player': text_data_json['player'],
+                'player': self.username, #text_data_json['player'],
                 'message': text_data_json['message']
             }
         )

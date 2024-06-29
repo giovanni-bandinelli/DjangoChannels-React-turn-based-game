@@ -8,8 +8,9 @@ const Lobby: React.FC = () => {
 
   useEffect(() => {
     const roomName = new URLSearchParams(window.location.search).get('room');
-    if (roomName) {
-      const socket = new WebSocket(`ws://127.0.0.1:8000/ws/lobby/${roomName}/`);
+    const token = localStorage.getItem('accessToken');
+    if (roomName && token) {
+      const socket = new WebSocket(`ws://127.0.0.1:8000/ws/lobby/${roomName}/${token}/`);
       socket.onmessage = (e) => {
         const data = JSON.parse(e.data);
         setMessages((prev) => [...prev, data.message]);
@@ -24,7 +25,7 @@ const Lobby: React.FC = () => {
 
   const sendMessage = () => {
     if (ws && message) {
-      ws.send(JSON.stringify({ message }));
+      ws.send(JSON.stringify({ 'type': 'chat_message', 'message': message }));
       setMessage('');
     }
   };
