@@ -1,4 +1,3 @@
-// src/pages/Lobby.tsx
 import React, { useEffect, useState } from 'react';
 
 const Lobby: React.FC = () => {
@@ -16,11 +15,11 @@ const Lobby: React.FC = () => {
         setMessages((prev) => [...prev, data.message]);
       };
       setWs(socket);
-    }
 
-    return () => {
-      ws?.close();
-    };
+      return () => {
+        socket.close();
+      };
+    }
   }, []);
 
   const sendMessage = () => {
