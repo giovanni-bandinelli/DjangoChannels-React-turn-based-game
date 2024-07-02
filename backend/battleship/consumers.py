@@ -10,7 +10,7 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_group_name = self.scope['url_route']['kwargs']['room_id']
         
-        #JWT SHOULD BE TAKEN FROM STOEAGE ACTUALLy
+       
         token = self.scope['url_route']['kwargs']['token']
 
         try:
@@ -66,16 +66,18 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             {
                 'type': 'chat_message',
-                'player': self.username, #text_data_json['player'],
+                'username': self.username, #text_data_json['player'],
                 'message': text_data_json['message']
             }
         )
 
     async def chat_message(self, event):
         message = event['message']
-        
+        sender = event['username']
+        print(sender+"  sent this message:"+ message)
         await self.send(text_data=json.dumps({
             'type': 'chat_message',
+            'username': sender,
             'message': message
         }))
 
