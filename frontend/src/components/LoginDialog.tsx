@@ -6,7 +6,7 @@ import { guestLogin } from '../api/api';
 interface LoginDialogProps {
   open: boolean;
   onClose: () => void;
-  onLoginSuccess: (token: string) => void;
+  onLoginSuccess: (token: string, username: string) => void;
 }
 
 const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose, onLoginSuccess }) => {
@@ -15,7 +15,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose, onLoginSuccess
   const handleLogin = async () => {
     try {
       const token = await guestLogin(username);
-      onLoginSuccess(token);
+      onLoginSuccess(token,username);
       onClose();
     } catch (error) {
       alert('Login failed. Please try again.');

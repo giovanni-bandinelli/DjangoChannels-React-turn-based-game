@@ -8,6 +8,7 @@ const Home: React.FC = () => {
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isGameSetupDialogOpen, setIsGameSetupDialogOpen] = useState(false);
   const [token, setToken] = useState(localStorage.getItem('accessToken'));
+  const [username, setUsername] = useState<string | null>(localStorage.getItem('username'));
 
   const handlePlayButtonClick = () => {
     if (token) {
@@ -17,9 +18,11 @@ const Home: React.FC = () => {
     }
   };
 
-  const handleLoginSuccess = (newToken: string) => {
+  const handleLoginSuccess = (newToken: string, newUsername: string) => {
     localStorage.setItem('accessToken', newToken);
     setToken(newToken);
+    setUsername(newUsername);
+    
   };
 
   const handleCreateRoomSuccess = (roomName: string) => {
@@ -32,6 +35,11 @@ const Home: React.FC = () => {
       <Button variant="contained" onClick={handlePlayButtonClick}>
         Play with a Friend
       </Button>
+      {username ? (
+          <div>Currently logged in as guest user: <b>{username}</b></div>
+        ) : (
+          <div>Currently not logged in.</div>
+        )}  
       <LoginDialog open={isLoginDialogOpen} onClose={() => setIsLoginDialogOpen(false)} onLoginSuccess={handleLoginSuccess} />
       <GameSetupDialog open={isGameSetupDialogOpen} onClose={() => setIsGameSetupDialogOpen(false)} onCreateRoomSuccess={handleCreateRoomSuccess} />
     </div>

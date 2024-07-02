@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-const BASE_URL = 'http://127.0.0.1:8000/api';  
+const BASE_URL = 'http://192.168.1.125:8000/api';  
 
 // Axios instance with base URL
 const api = axios.create({
@@ -29,6 +29,7 @@ export const guestLogin = async (username: string) => {
     const response = await api.post('/guest-login/', { username });
     const token = response.data.token;
     localStorage.setItem('accessToken', token);
+    localStorage.setItem('username', username);
     return token;
   } catch (error) {
     throw new Error('Failed to log in as guest.');
