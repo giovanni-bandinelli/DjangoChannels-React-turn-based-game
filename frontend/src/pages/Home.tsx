@@ -7,7 +7,7 @@ import GameSetupDialog from '../components/GameSetupDialog';
 const Home: React.FC = () => {
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isGameSetupDialogOpen, setIsGameSetupDialogOpen] = useState(false);
-  const [token, setToken] = useState(localStorage.getItem('accessToken'));
+  const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'));
   const [username, setUsername] = useState<string | null>(localStorage.getItem('username'));
 
   const handlePlayButtonClick = () => {

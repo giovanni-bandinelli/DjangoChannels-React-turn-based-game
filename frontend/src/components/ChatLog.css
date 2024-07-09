@@ -1,14 +1,17 @@
 
 #RoomActivityContainer {
     position: relative;
-    width: 100%;
-    max-width: 600px; 
-    margin: 0 auto;
-    padding: 0 20px 20px 20px;
+    width: 100vh;
+    margin:auto;
+    max-width: 600px;
+    height: 75vh; 
+    margin: 0 ;
+    padding: 0px ;
     background-color:#1b1b21;
     border: 1px solid #1b1b21;
     border-radius: 5px;
-    
+    display: flex;
+    flex-direction: column;
   }
   
   #RoomActivityTitle {
@@ -17,12 +20,18 @@
     font-size: 2rem;
   }
 
+  #CloseChatLogBtn {
+    position: absolute;
+    right: 1.5rem;
+    font-size: larger;
+  }
+
   #RoomActivityMessages {
     display: flex;
     flex-direction: column;
     background-color: inherit;
-    
-    height: 80vh;
+    flex: 1;
+    height: calc(100% -7rem);/* Idk what to do here this space should be calculated based on user's device's height and be fixed so that container can display whole chatbox without needing to scroll, do u understand?*/
     scroll-behavior: smooth;
     overflow-y: scroll;
     padding: 0 1rem;
@@ -62,3 +71,6 @@
     border-radius: 3px;
   }
   
+  @media screen {
+    
+  }

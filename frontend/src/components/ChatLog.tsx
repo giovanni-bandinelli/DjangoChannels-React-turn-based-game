@@ -1,19 +1,21 @@
-// ChatLog.tsx
 import './ChatLog.css';
+//import CloseIcon from '@mui/icons-material/Close'; <span id="CloseChatLogBtn"><CloseIcon /></span>
 import React from 'react';
 
 interface ChatLogProps {
   messages: { message: string, username: string }[];
   message: string;
   setMessage: React.Dispatch<React.SetStateAction<string>>;
-  sendMessage: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  sendMessage: () => void; 
 }
 
 const ChatLog: React.FC<ChatLogProps> = ({ messages, message, setMessage, sendMessage }) => {
+  
   return (
-    <div>
+    <div id="RoomActivityContainer">
       <div id="RoomActivityTitle">
         <span>Room Activity</span>
+        
       </div>
       <div id="RoomActivityMessages">
         {messages.map((msg, index) => (
@@ -31,7 +33,11 @@ const ChatLog: React.FC<ChatLogProps> = ({ messages, message, setMessage, sendMe
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="send message"
-          onKeyUp={sendMessage}
+          onKeyUp={(e) => {
+            if (e.key === 'Enter') {
+              sendMessage();
+            }
+          }}
         />
       </div>
     </div>

@@ -1,0 +1,61 @@
+/* General styling for the container and grid */
+#battleship-game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#gameboards-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.game-board {
+    display: grid;
+    grid-template-columns: repeat(10, 2rem);
+    grid-template-rows: repeat(10, 2rem);
+    gap: 1px;
+    border: 2px solid #000;
+}
+
+/* Individual cells */
+.cell {
+    width: 2rem;
+    height: 2rem;
+    background-color: cornflowerblue;
+    border: 1px solid black;
+}
+
+.ship-cell {
+    width: 100%;
+    height: 100%;
+}
+
+/* Ship colors */
+.carrier-cell {
+    background-color: whitesmoke;
+}
+
+.battleship-cell {
+    background-color: palevioletred;
+}
+
+.cruiser-cell {
+    background-color: yellowgreen;
+}
+
+.submarine-cell {
+    background-color: yellow;
+}
+
+.destroyer-cell {
+    background-color: lightsalmon;
+}
+
+
+.setup-buttons-container {
+    display: flex;
+    gap: 1rem;
+    padding: 0.5rem;
+}
