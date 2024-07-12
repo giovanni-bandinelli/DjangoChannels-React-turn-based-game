@@ -1,3 +1,5 @@
+// Lobby.tsx
+
 import './Lobby.css';
 import React, { useEffect, useState, useRef } from 'react';
 import ChatLog from '../components/ChatLog';
@@ -11,6 +13,7 @@ const Lobby: React.FC = () => {
   const isWsOpen = useRef(false);
   const initialized = useRef(false);
 
+
   useEffect(() => {
     const roomName = new URLSearchParams(window.location.search).get('room');
     const token = localStorage.getItem('accessToken');
@@ -21,21 +24,25 @@ const Lobby: React.FC = () => {
 
       socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log('Received WebSocket message:', data); 
+        console.log('Received WebSocket message:', data);
 
         if (data.type === 'chat_message') {
-
-          setMessages((prev) => {
+          setMessages(prev => {
             const newMessages = [...prev, { message: data.message, username: data.username }];
             return newMessages;
           });
-        } 
-        else if (data.type === 'setup') {
-
+        } else if (data.type === 'setup') {
           setShips(data.ships);
           localStorage.setItem('ships', JSON.stringify(data.ships));
+        } else if (data.type === 'start_game') {
+          // logic that will start the game on both clients
+        } else if (data.type === 'restore_lobby_history') {
+          // Load initial game state
+          //setShips(data.ships); yet to see how to do this lol
+          setMessages(data.chat_history || []);
         }
-      }
+      };
+
       socket.onopen = () => {
         setWs(socket);
         isWsOpen.current = true;
@@ -67,7 +74,7 @@ const Lobby: React.FC = () => {
       console.log('Sending message:', message);
       const username = localStorage.getItem('username');
       ws.send(JSON.stringify({ 'type': 'chat_message', 'message': message, 'username': username }));
-      setMessage(''); 
+      setMessage('');
     }
   };
 
@@ -91,7 +98,7 @@ const Lobby: React.FC = () => {
 
   return (
     <div className='lobby-container'>
-      <BattleShipGame ships={ships} setShips={setShips} randomizeShips={randomizeShips} />
+      <BattleShipGame ships={ships} setShips={setShips} randomizeShips={randomizeShips} onGameStart={() => { }} />
       <ChatLog messages={messages} message={message} setMessage={setMessage} sendMessage={sendMessage} />
     </div>
   );
