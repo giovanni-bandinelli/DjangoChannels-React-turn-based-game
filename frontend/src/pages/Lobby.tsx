@@ -20,7 +20,7 @@ const Lobby: React.FC = () => {
   const [shotsReceived, setShotsReceived] = useState<any[]>([]);
 
   const setupWebSocket = useCallback((roomName: string, token: string) => {
-    const socket = new WebSocket(`ws://192.168.1.125:8000/ws/lobby/${roomName}/${token}/`);
+    const socket = new WebSocket(`ws://localhost:8000/ws/lobby/${roomName}/${token}/`);
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
