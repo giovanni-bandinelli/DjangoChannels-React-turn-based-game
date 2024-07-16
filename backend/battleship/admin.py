@@ -5,7 +5,7 @@ from .models import GameRoom
 
 
 class GameRoomAdmin(admin.ModelAdmin):
-    list_display = ['id', 'room_name', 'player1', 'player2', 'game_started', 'created_at']
+    list_display = ['id', 'room_name', 'player1', 'player2', 'game_started', 'created_at','chat_history']
 
 
 admin.site.register(GameRoom, GameRoomAdmin)

@@ -34,7 +34,7 @@ class CreateRoomView(APIView):
         username = payload.get('username')
         if username:
             room_name = uuid.uuid4()  # Generate a random UUID for the room name
-            room = GameRoom.objects.create(room_name=room_name, player1=username)
+            room = GameRoom.objects.create(room_name=room_name)
             return Response({"room_name": str(room_name)}, status=status.HTTP_201_CREATED)
         return Response("token missing", status=status.HTTP_400_BAD_REQUEST)
 

@@ -1,9 +1,9 @@
-// BattleShipGame.tsx
+// setup.tsx
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@mui/material';
-import DiceIcon from './DiceIcon';
-import './BattleShipGame.css';
+import DiceIcon from '../DiceIcon';
+import '../BattleShipGame.css';
 
 interface Ship {
   type: string;
@@ -11,18 +11,17 @@ interface Ship {
   coordinates: { x: number; y: number }[];
 }
 
-interface BattleShipGameProps {
+interface SetupGameProps {
   ships: Ship[];
-  setShips: React.Dispatch<React.SetStateAction<Ship[]>>;
   randomizeShips: () => void;
-  onGameStart: () => void; // Callback for game start
+  setAsReady: () => void;
 }
 
-const BattleShipGame: React.FC<BattleShipGameProps> = ({ ships, setShips, randomizeShips, onGameStart }) => {
+const SetupGame: React.FC<SetupGameProps> = ({ ships, randomizeShips, setAsReady}) => {
   const initialBoard = Array.from({ length: 10 }, () => Array(10).fill(null));
 
   const [playerBoard, setPlayerBoard] = useState(initialBoard);
-  const [ready, setReady] = useState(false); // State to track player readiness
+  
 
   useEffect(() => {
     updateBoardWithShips(ships);
@@ -38,20 +37,9 @@ const BattleShipGame: React.FC<BattleShipGameProps> = ({ ships, setShips, random
     setPlayerBoard(newBoard);
   };
 
-  const handleCellClick = (cellIndex: number, rowIndex: number) => {
-    console.log(`Cell clicked at row ${rowIndex + 1}, col ${cellIndex + 1}`);
-  };
-
   const getShipCellClass = (shipType: string | null) => {
     if (!shipType) return '';
     return `${shipType.toLowerCase()}-cell ship-cell`;
-  };
-
-  const handleReady = () => {
-    // Set player ready state to true
-    setReady(true);
-    // Inform backend that player is ready
-    onGameStart(); // This function will send a WebSocket message to the backend
   };
 
   return (
@@ -64,7 +52,7 @@ const BattleShipGame: React.FC<BattleShipGameProps> = ({ ships, setShips, random
           {playerBoard.map((row, rowIndex) => (
             <React.Fragment key={rowIndex}>
               {row.map((cell, cellIndex) => (
-                <div key={cellIndex} className="cell" onClick={() => handleCellClick(cellIndex, rowIndex)}>
+                <div key={cellIndex} className="cell">
                   {cell && <div className={getShipCellClass(cell)}></div>}
                 </div>
               ))}
@@ -74,10 +62,10 @@ const BattleShipGame: React.FC<BattleShipGameProps> = ({ ships, setShips, random
       </div>
       <div className='setup-buttons-container'>
         <Button id="randomize-button" onClick={randomizeShips} variant="contained" startIcon={<DiceIcon />}>Randomize</Button>
-        <Button id="start-button" onClick={handleReady} variant="contained" disabled={ready}>Ready</Button>
+        <Button id="start-button" onClick={setAsReady} variant="contained">Ready</Button>
       </div>
     </div>
   );
 };
 
-export default BattleShipGame;
+export default SetupGame;
