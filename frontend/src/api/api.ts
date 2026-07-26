@@ -36,11 +36,13 @@ export const guestLogin = async (username: string) => {
   }
 };
 
-// Function to create a game room
-export const createRoom = async (roomSettings: any, headers: any) => {
+// Function to create a game room.
+// No body and no headers: the room has nothing to configure yet, and the
+// Authorization header is already added by the interceptor above.
+export const createRoom = async () => {
     try {
-      const response = await api.post('/create-room/', roomSettings, headers);
-      return response.data; 
+      const response = await api.post('/create-room/', {});
+      return response.data;
     } catch (error) {
       throw new Error('Failed to create room.');
     }

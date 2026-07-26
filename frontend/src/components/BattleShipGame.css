@@ -89,11 +89,11 @@
 
 /* Ship colors */
 .carrier-cell {
-    background-color: rgb(194, 84, 84);
+    background-color: rgb(197, 93, 255);
 }
 
 .battleship-cell {
-    background-color: rgb(238, 7, 84);
+    background-color: rgb(26, 99, 24);
 }
 
 .cruiser-cell {
@@ -101,11 +101,11 @@
 }
 
 .submarine-cell {
-    background-color: rgba(255, 255, 0, 0.749);
+    background-color: rgb(238, 238, 58);
 }
 
 .destroyer-cell {
-    background-color: rgb(214, 61, 0);
+    background-color: orange;
 }
 
 .setup-buttons-container {
