@@ -1,0 +1,43 @@
+.waiting-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem 1rem;
+}
+
+.waiting-title {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.waiting-hint {
+    margin: 0;
+    color: #a9a9b4;
+}
+
+.waiting-link {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 32rem;
+}
+
+.waiting-link input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.6rem;
+    font-size: 0.95rem;
+    color: inherit;
+    background-color: #2a2a32;
+    border: 1px solid #44444f;
+    border-radius: 3px;
+}
+
+/* the QR needs a light background to stay readable by a phone camera */
+.waiting-qr {
+    background-color: white;
+    padding: 0.75rem;
+    border-radius: 6px;
+    line-height: 0;
+}

@@ -1,11 +1,15 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import ChatLog from '../components/ChatLog';
+import LoginDialog from '../components/LoginDialog';
 import SetupGame from '../components/phases/SetupGame';
 import Waiting from '../components/phases/Waiting';
 import Game from '../components/phases/Game';
+import { BACKEND_HOST } from '../api/api';
 import './Lobby.css'
 
 const Lobby: React.FC = () => {
+  // whoever opens an invite link has never logged in on this device
+  const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'));
   const [messages, setMessages] = useState<{ message: string, username: string }[]>([]);
   const [message, setMessage] = useState('');
   const [ships, setShips] = useState<any[]>([]);
@@ -22,7 +26,8 @@ const Lobby: React.FC = () => {
   const [youWon, setYouWon] = useState(false);
 
   const setupWebSocket = useCallback((roomName: string, token: string) => {
-    const socket = new WebSocket(`ws://localhost:8000/ws/lobby/${roomName}/${token}/`);
+    const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const socket = new WebSocket(`${scheme}://${BACKEND_HOST}/ws/lobby/${roomName}/${token}/`);
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -106,13 +111,12 @@ const Lobby: React.FC = () => {
 
   useEffect(() => {
     const roomName = new URLSearchParams(window.location.search).get('room');
-    const token = localStorage.getItem('accessToken');
 
     if (roomName && token && !isWsOpen.current) {
       console.log('Attempting to open WebSocket connection');
       setupWebSocket(roomName, token);
     }
-  }, [setupWebSocket]);
+  }, [setupWebSocket, token]);
 
   const sendMessage = () => {
     if (ws && message) {
@@ -169,6 +173,20 @@ const Lobby: React.FC = () => {
       initialized.current = true;
     }
   }, [ws]);
+
+  // no guest identity on this device yet: ask for a name before anything else,
+  // and send whoever refuses back to the home page
+  if (!token) {
+    return (
+      <div className='lobby-container'>
+        <LoginDialog
+          open={true}
+          onClose={() => { window.location.href = '/'; }}
+          onLoginSuccess={(newToken) => setToken(newToken)}
+        />
+      </div>
+    );
+  }
 
   switch (phase) {
     case 'setup':

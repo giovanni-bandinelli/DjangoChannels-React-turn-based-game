@@ -1,16 +1,37 @@
+import os
 from pathlib import Path
 from datetime import timedelta
+
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-bg3j^s6&1o66bv7mt&67+)r)t44s7sdbks4x1s=&7x*5e^grk6'
+# local development only: in production these come from the host's own
+# environment variables, there is no .env file to deploy
+load_dotenv(BASE_DIR / '.env')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ['127.0.0.1','localhost','192.168.1.125']
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured(
+            'DJANGO_SECRET_KEY must be set when DEBUG is off. '
+            'Generate one with: python -c "from django.core.management.utils '
+            'import get_random_secret_key; print(get_random_secret_key())"'
+        )
+    SECRET_KEY = 'django-insecure-development-key-not-for-production'
+
+# in development any host is fine: the dev server is reached from phones and
+# other machines on the LAN, whose addresses change. In production the list is
+# explicit, and an empty one makes Django refuse every request on purpose.
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = [h.strip() for h in
+                     os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h.strip()]
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_HEADERS = [

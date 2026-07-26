@@ -2,7 +2,15 @@
 
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:8000/api';  
+// In production VITE_BACKEND_HOST is set at build time (e.g. api.example.com).
+// Without it we fall back to the address the page was opened at, which is what
+// makes the dev server reachable from a phone on the LAN: hardcoding
+// "localhost" would tell the phone to call itself.
+export const BACKEND_HOST =
+  import.meta.env.VITE_BACKEND_HOST || `${window.location.hostname}:8000`;
+
+const httpScheme = window.location.protocol === 'https:' ? 'https' : 'http';
+const BASE_URL = `${httpScheme}://${BACKEND_HOST}/api`;
 
 // Axios instance with base URL
 const api = axios.create({

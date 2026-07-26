@@ -15,8 +15,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose, onLoginSuccess
   const handleLogin = async () => {
     try {
       const token = await guestLogin(username);
-      onLoginSuccess(token,username);
-      onClose();
+      // closing is up to the parent: on the lobby page, cancelling and
+      // succeeding have to lead to two different places
+      onLoginSuccess(token, username);
     } catch (error) {
       alert('Login failed. Please try again.');
     }

@@ -21,9 +21,11 @@ frontend/dist/
 # Ignore log files
 *.log
 
-# Ignore package lock files (if not needed for specific version control)
-package-lock.json
-yarn.lock
+# NB: lock files SHOULD be committed. They are what makes an install
+# reproducible months later, which is exactly what went wrong on the Python
+# side of this project.
+# package-lock.json
+# yarn.lock
 
 # Ignore environment variable files
 .env
