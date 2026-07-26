@@ -18,6 +18,8 @@ const Lobby: React.FC = () => {
   const [isPlayerTurn, setIsPlayerTurn] = useState<boolean>(false);
   const [shotsFired, setShotsFired] = useState<any[]>([]);
   const [shotsReceived, setShotsReceived] = useState<any[]>([]);
+  const [gameOver, setGameOver] = useState(false);
+  const [youWon, setYouWon] = useState(false);
 
   const setupWebSocket = useCallback((roomName: string, token: string) => {
     const socket = new WebSocket(`ws://localhost:8000/ws/lobby/${roomName}/${token}/`);
@@ -39,11 +41,13 @@ const Lobby: React.FC = () => {
         case 'restore_game_history':
           setPhase(data.lobby_phase);
           setMessages(data.chat_history || []);
-          if (data.lobby_phase === 'game') {
+          if (data.lobby_phase === 'game' || data.lobby_phase === 'finished') {
             setIsPlayerTurn(data.your_turn);
-            setYourShips(data.your_ships);
-            setShotsFired(data.shots_fired_history);
-            setShotsReceived(data.shots_received_history);
+            setYourShips(data.your_ships || []);
+            setShotsFired(data.shots_fired || []);
+            setShotsReceived(data.shots_received || []);
+            setGameOver(data.game_over);
+            setYouWon(data.you_won);
           }
           break;
 
@@ -53,18 +57,28 @@ const Lobby: React.FC = () => {
 
         case 'game_started':
           setIsPlayerTurn(data.your_turn);
-          setYourShips(data.your_ships);
-          setShotsFired(data.shots_fired_history);
-          setShotsReceived(data.shots_received_history);
+          setYourShips(data.your_ships || []);
+          setShotsFired(data.shots_fired || []);
+          setShotsReceived(data.shots_received || []);
+          setGameOver(false);
+          setYouWon(false);
           break;
 
-        case 'turn_changed':
-          console.log('Turn changed:', data.current_turn);
+        case 'shot_result': {
+          const shot = { x: data.x, y: data.y, hit: data.hit };
+          if (data.by_you) {
+            setShotsFired(prev => [...prev, shot]);
+          } else {
+            setShotsReceived(prev => [...prev, shot]);
+          }
+          setIsPlayerTurn(data.your_turn);
+          if (data.game_over) {
+            setGameOver(true);
+            setYouWon(data.you_won);
+            setPhase('finished');
+          }
           break;
-
-        case 'shot_received':
-          console.log('Shot received:', data);
-          break;
+        }
 
         default:
           break;
@@ -130,8 +144,10 @@ const Lobby: React.FC = () => {
     }
   };
 
-  const handleCellClick = (cellIndex: number, rowIndex: number) => {
-    console.log(`Cell clicked at row ${rowIndex + 1}, col ${cellIndex + 1}`);
+  const handleCellClick = (x: number, y: number) => {
+    if (ws && isPlayerTurn && !gameOver) {
+      ws.send(JSON.stringify({ type: 'shot', x, y }));
+    }
   };
 
   useEffect(() => {
@@ -163,9 +179,18 @@ const Lobby: React.FC = () => {
         </div>
       );
     case 'game':
+    case 'finished':
       return (
         <div className='lobby-container'>
-          <Game yourShips={yourShips} isPlayerTurn={isPlayerTurn} shotsFired={shotsFired} shotsReceived={shotsReceived} handleCellClick={handleCellClick} />
+          <Game
+            yourShips={yourShips}
+            isPlayerTurn={isPlayerTurn}
+            shotsFired={shotsFired}
+            shotsReceived={shotsReceived}
+            handleCellClick={handleCellClick}
+            gameOver={gameOver}
+            youWon={youWon}
+          />
           <ChatLog messages={messages} message={message} setMessage={setMessage} sendMessage={sendMessage} />
         </div>
       );

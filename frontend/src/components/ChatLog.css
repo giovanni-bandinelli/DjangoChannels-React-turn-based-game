@@ -1,76 +1,84 @@
-
 #RoomActivityContainer {
     position: relative;
-    width: 100vh;
-    margin:auto;
+    width: 100%;
     max-width: 600px;
-    height: 75vh; 
-    margin: 0 ;
-    padding: 0px ;
-    background-color:#1b1b21;
+    height: 75vh;
+    margin: 0;
+    padding: 0;
+    background-color: #1b1b21;
     border: 1px solid #1b1b21;
     border-radius: 5px;
     display: flex;
     flex-direction: column;
-  }
-  
-  #RoomActivityTitle {
+    box-sizing: border-box;
+}
+
+#RoomActivityTitle {
     text-align: center;
-    height: 5rem;
-    font-size: 2rem;
-  }
+    padding: 1rem 0;
+    font-size: 1.75rem;
+}
 
-  #CloseChatLogBtn {
-    position: absolute;
-    right: 1.5rem;
-    font-size: larger;
-  }
-
-  #RoomActivityMessages {
+#RoomActivityMessages {
     display: flex;
     flex-direction: column;
     background-color: inherit;
+    /* flex: 1 already does what the old calc() was trying to do: take all the
+       height left over by title and input, whatever the screen size */
     flex: 1;
-    height: calc(100% -7rem);/* Idk what to do here this space should be calculated based on user's device's height and be fixed so that container can display whole chatbox without needing to scroll, do u understand?*/
+    min-height: 0;
+    overflow-y: auto;
     scroll-behavior: smooth;
-    overflow-y: scroll;
     padding: 0 1rem;
+}
 
-  }
-  .message{
+.message {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    gap: 1rem;
     border-bottom: 1px grey solid;
-    padding: 1rem;
-   
-    
-    
-  }
-  .message .msg-content{
-   text-align: left;
-  }
-  
-  .message .msg-username-wrapper{
-   display: flex;
-   flex-direction: row;
-  }
-  
-  #RoomActivityInput {
+    padding: 0.75rem 0.5rem;
+}
+
+.message .msg-content {
+    text-align: left;
+}
+
+.message .msg-username-wrapper {
     display: flex;
-    margin-top: 10px;
+    flex-direction: row;
+    white-space: nowrap;
+}
+
+.message-server {
+    color: #ffca28;
+    font-style: italic;
+}
+
+#RoomActivityInput {
+    display: flex;
+    padding: 0.75rem;
     background-color: inherit;
-    z-index: 10;
-  }
-  
-  #RoomActivityInput input {
+}
+
+#RoomActivityInput input {
     flex: 1;
+    min-width: 0;
     padding: 10px;
     font-size: 1rem;
-    border: 1px solid #ccc;
+    color: inherit;
+    background-color: #2a2a32;
+    border: 1px solid #44444f;
     border-radius: 3px;
-  }
-  
-  @media screen {
-    
-  }
+}
+
+#RoomActivityInput input::placeholder {
+    color: #8b8b96;
+}
+
+@media (max-width: 900px) {
+    #RoomActivityContainer {
+        height: 45vh;
+    }
+}

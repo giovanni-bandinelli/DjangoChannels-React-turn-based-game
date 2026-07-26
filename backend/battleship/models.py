@@ -29,7 +29,7 @@ class GameRoom(models.Model):
         if new_message not in self.chat_history:
             
             self.chat_history.append(new_message)
-            self.save()
+            self.save(update_fields=['chat_history'])
 
     def get_chat_history(self):
         return self.chat_history if self.chat_history else []

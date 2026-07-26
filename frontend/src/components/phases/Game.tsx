@@ -1,12 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import '../BattleShipGame.css';
 
-interface GameProps {
-  yourShips: Ship[];
-  isPlayerTurn: boolean;
-  handleCellClick: (cellIndex: number, rowIndex: number) => void;
-  shotsFired: { x: number; y: number }[];
-  shotsReceived: { x: number; y: number }[];
+interface Shot {
+  x: number;
+  y: number;
+  hit: boolean;
 }
 
 interface Ship {
@@ -15,113 +13,98 @@ interface Ship {
   coordinates: { x: number; y: number }[];
 }
 
+interface GameProps {
+  yourShips: Ship[];
+  isPlayerTurn: boolean;
+  handleCellClick: (x: number, y: number) => void;
+  shotsFired: Shot[];
+  shotsReceived: Shot[];
+  gameOver: boolean;
+  youWon: boolean;
+}
+
+const BOARD_SIZE = 10;
+const key = (x: number, y: number) => `${x},${y}`;
+
+const shotMap = (shots: Shot[]) =>
+  new Map(shots.map(shot => [key(shot.x, shot.y), shot]));
+
 const Game: React.FC<GameProps> = ({
-  yourShips,
+  yourShips = [],
   isPlayerTurn,
   handleCellClick,
   shotsFired = [],
-  shotsReceived = []
+  shotsReceived = [],
+  gameOver = false,
+  youWon = false,
 }) => {
-  const initialBoard = useMemo(() => Array.from({ length: 10 }, () => Array(10).fill(null)), []);
-  const [boardState, setBoardState] = useState({
-    yourBoard: initialBoard,
-    enemyBoard: initialBoard
-  });
-
-  useEffect(() => {
-    const updateBoardWithShips = () => {
-      const newBoard = initialBoard.map(row => [...row]);
-      yourShips.forEach(ship => {
-        ship.coordinates.forEach(coord => {
-          newBoard[coord.x][coord.y] = ship.type;
-        });
-      });
-      setBoardState(prevState => ({ ...prevState, yourBoard: newBoard }));
-    };
-
-    updateBoardWithShips();
+  const shipCells = useMemo(() => {
+    const cells = new Map<string, string>();
+    yourShips.forEach(ship =>
+      ship.coordinates.forEach(coord =>
+        cells.set(key(coord.x, coord.y), ship.type.toLowerCase())
+      )
+    );
+    return cells;
   }, [yourShips]);
 
- /**DIO CANE DIO CANE DIO CANE, TENTATIVO DI EVENTUALMENTE CARICARE I COLPI SPARATI DA ENTRAMBI CAUSA RE-RENDERING INFINITO
-  * (MANCA TUTTA LA LOGICA ALSO MA SAREBBE SOLTANTO UN "MANDA COORDINATE CELLA AVVERSARIA PREMUTA (SE NON È
-  * GIÀ STATA CLICCATA ONCE E SE È IL TUO TURNO") RICEVI HIT/MISS  > SOMEWHERE NEL CONSUMER/MODELS.PY TIENI TRACCIA DI QUANDO UNA NAVE È STATA AFFONDATA E EVENTUALMENTE MANDI MESSAGGIO GAME_ENDED
-  * 
-   useEffect(() => {
-    const updatePlayerBoardWithShots = () => {
-      setBoardState(prevState => {
-        const newBoard = prevState.yourBoard.map(row => [...row]);
-        shotsReceived.forEach(shot => {
-          if (newBoard[shot.x][shot.y] !== 'cell-fired') {
-            newBoard[shot.x][shot.y] = 'cell-fired';
-          }
-        });
-        return { ...prevState, yourBoard: newBoard };
-      });
-    };
+  const received = useMemo(() => shotMap(shotsReceived), [shotsReceived]);
+  const fired = useMemo(() => shotMap(shotsFired), [shotsFired]);
 
-    updatePlayerBoardWithShots();
-  }, [shotsReceived]);
+  const rows = Array.from({ length: BOARD_SIZE }, (_, x) => x);
+  const cols = Array.from({ length: BOARD_SIZE }, (_, y) => y);
 
-  useEffect(() => {
-    const updateEnemyBoardWithShots = () => {
-      setBoardState(prevState => {
-        const newBoard = prevState.enemyBoard.map(row => [...row]);
-        shotsFired.forEach(shot => {
-          if (newBoard[shot.x][shot.y] !== 'cell-fired') {
-            newBoard[shot.x][shot.y] = 'cell-fired';
-          }
-        });
-        return { ...prevState, enemyBoard: newBoard };
-      });
-    };
-
-    updateEnemyBoardWithShots();
-  }, [shotsFired]);
-
-  */
-  const getShipCellClass = (cellContent: string | null) => {
-    if (!cellContent) return '';
-    if (cellContent === 'hit') return 'hit-cell';
-    if (cellContent === 'cell-fired') return 'cell-fired';
-    return `${cellContent.toLowerCase()}-cell ship-cell`;
-  };
+  const peg = (shot: Shot | undefined) =>
+    shot ? <div className={shot.hit ? 'peg peg-hit' : 'peg peg-miss'} /> : null;
 
   return (
     <div id="battleship-game-container">
       <div id="game-info">
-        <p>{isPlayerTurn ? "Your turn to fire!" : "Enemy's turn to fire!"}</p>
+        {gameOver ? (
+          <p className={youWon ? 'result result-won' : 'result result-lost'}>
+            {youWon ? 'You won!' : 'You lost.'}
+          </p>
+        ) : (
+          <p>{isPlayerTurn ? 'Your turn to fire!' : "Enemy's turn to fire!"}</p>
+        )}
       </div>
+
       <div id="gameboards-container">
         <div className="game-board-container">
           <h3>Your Board</h3>
           <div className="player-board game-board">
-            {boardState.yourBoard.map((row, rowIndex) => (
-              <React.Fragment key={rowIndex}>
-                {row.map((cell, cellIndex) => (
-                  <div key={cellIndex} className="cell">
-                    {cell && <div className={getShipCellClass(cell)}></div>}
+            {rows.map(x =>
+              cols.map(y => {
+                const shipType = shipCells.get(key(x, y));
+                return (
+                  <div key={key(x, y)} className="cell">
+                    {shipType && <div className={`${shipType}-cell ship-cell`} />}
+                    {peg(received.get(key(x, y)))}
                   </div>
-                ))}
-              </React.Fragment>
-            ))}
+                );
+              })
+            )}
           </div>
         </div>
+
         <div className="game-board-container">
           <h3>Enemy's Board</h3>
           <div className="enemy-board game-board">
-            {boardState.enemyBoard.map((row, rowIndex) => (
-              <React.Fragment key={rowIndex}>
-                {row.map((cell, cellIndex) => (
+            {rows.map(x =>
+              cols.map(y => {
+                const alreadyFired = fired.has(key(x, y));
+                const canFire = isPlayerTurn && !gameOver && !alreadyFired;
+                return (
                   <div
-                    key={cellIndex}
-                    className="cell"
-                    onClick={() => isPlayerTurn && handleCellClick(cellIndex, rowIndex)}
+                    key={key(x, y)}
+                    className={`cell ${canFire ? 'cell-targetable' : ''}`}
+                    onClick={() => canFire && handleCellClick(x, y)}
                   >
-                    {cell && <div className={getShipCellClass(cell)}></div>}
+                    {peg(fired.get(key(x, y)))}
                   </div>
-                ))}
-              </React.Fragment>
-            ))}
+                );
+              })
+            )}
           </div>
         </div>
       </div>
