@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Button } from '@mui/material';
+import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import ChatLog from '../components/ChatLog';
 import LoginDialog from '../components/LoginDialog';
 import SetupGame from '../components/phases/SetupGame';
 import Waiting from '../components/phases/Waiting';
 import Game from '../components/phases/Game';
-import { BACKEND_HOST } from '../api/api';
 import './Lobby.css'
 
 const Lobby: React.FC = () => {
@@ -15,7 +16,6 @@ const Lobby: React.FC = () => {
   const [ships, setShips] = useState<any[]>([]);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const isWsOpen = useRef(false);
-  const initialized = useRef(false);
 
   const [phase, setPhase] = useState('');
   const [yourShips, setYourShips] = useState<any[]>([]);
@@ -24,10 +24,19 @@ const Lobby: React.FC = () => {
   const [shotsReceived, setShotsReceived] = useState<any[]>([]);
   const [gameOver, setGameOver] = useState(false);
   const [youWon, setYouWon] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [youReady, setYouReady] = useState(false);
+  const [opponentReady, setOpponentReady] = useState(false);
+  const [connectionLost, setConnectionLost] = useState(false);
+  const [sunkMessage, setSunkMessage] = useState<string | null>(null);
+  const [enemySunk, setEnemySunk] = useState<any[]>([]);
 
   const setupWebSocket = useCallback((roomName: string, token: string) => {
+    // same host and port as the page: Vite forwards /ws to Django
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const socket = new WebSocket(`${scheme}://${BACKEND_HOST}/ws/lobby/${roomName}/${token}/`);
+    const socket = new WebSocket(
+      `${scheme}://${window.location.host}/ws/lobby/${roomName}/${token}/`
+    );
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -40,21 +49,30 @@ const Lobby: React.FC = () => {
 
         case 'new_ships_setup':
           setShips(data.ships);
-          localStorage.setItem('ships', JSON.stringify(data.ships));
           break;
 
-        case 'restore_game_history':
+        case 'restore_game_history': {
           setPhase(data.lobby_phase);
           setMessages(data.chat_history || []);
+          const restoredShips = data.your_ships || [];
+          setShips(restoredShips);
+          setYouReady(data.you_ready);
+          setOpponentReady(data.opponent_ready);
           if (data.lobby_phase === 'game' || data.lobby_phase === 'finished') {
             setIsPlayerTurn(data.your_turn);
-            setYourShips(data.your_ships || []);
+            setYourShips(restoredShips);
             setShotsFired(data.shots_fired || []);
             setShotsReceived(data.shots_received || []);
             setGameOver(data.game_over);
             setYouWon(data.you_won);
+            setEnemySunk(data.enemy_sunk || []);
+          } else if (restoredShips.length === 0) {
+            // first time in this room: ask the server for a layout. Sent on the
+            // socket itself, because the ws state variable is not set yet here.
+            socket.send(JSON.stringify({ type: 'randomize_ships' }));
           }
           break;
+        }
 
         case 'phase_change':
           setPhase(data.phase);
@@ -69,6 +87,28 @@ const Lobby: React.FC = () => {
           setYouWon(false);
           break;
 
+        case 'ready_state':
+          setYouReady(data.you_ready);
+          setOpponentReady(data.opponent_ready);
+          break;
+
+        case 'rematch_started':
+          setShotsFired([]);
+          setShotsReceived([]);
+          setYourShips([]);
+          setShips([]);
+          setGameOver(false);
+          setYouWon(false);
+          setIsPlayerTurn(false);
+          setYouReady(false);
+          setOpponentReady(false);
+          setSunkMessage(null);
+          setEnemySunk([]);
+          setPhase('setup');
+          // the server wiped the old layout, ask for a fresh one
+          socket.send(JSON.stringify({ type: 'randomize_ships' }));
+          break;
+
         case 'shot_result': {
           const shot = { x: data.x, y: data.y, hit: data.hit };
           if (data.by_you) {
@@ -77,6 +117,17 @@ const Lobby: React.FC = () => {
             setShotsReceived(prev => [...prev, shot]);
           }
           setIsPlayerTurn(data.your_turn);
+          // stays on screen until the next shot, then makes way for it
+          setSunkMessage(
+            data.sunk_ship
+              ? (data.by_you
+                  ? `You sank their ${data.sunk_ship.type}!`
+                  : `Your ${data.sunk_ship.type} was sunk!`)
+              : null
+          );
+          if (data.sunk_ship && data.by_you) {
+            setEnemySunk(prev => [...prev, data.sunk_ship]);
+          }
           if (data.game_over) {
             setGameOver(true);
             setYouWon(data.you_won);
@@ -104,6 +155,18 @@ const Lobby: React.FC = () => {
       console.log('WebSocket connection closed:', event);
       setWs(null);
       isWsOpen.current = false;
+
+      // custom codes sent by the consumer when it refuses the connection
+      if (event.code === 4003) {
+        setConnectionError('This room already has two players.');
+      } else if (event.code === 4001 || event.code === 4002) {
+        setConnectionError('Your guest session is not valid any more.');
+      } else {
+        // anything else means the link just dropped: a server restart, wifi,
+        // a laptop going to sleep. Without this the buttons keep being there
+        // and quietly do nothing, which looks like the app being broken.
+        setConnectionLost(true);
+      }
     };
 
     return socket;
@@ -133,18 +196,10 @@ const Lobby: React.FC = () => {
     }
   };
 
+  // no payload: the server already knows which ships it gave us
   const setAsReady = () => {
     if (ws) {
-      const savedShips = localStorage.getItem('ships');
-      let ships = [];
-      if (savedShips) {
-        try {
-          ships = JSON.parse(savedShips);
-        } catch (e) {
-          console.error('Error parsing ships from localStorage:', e);
-        }
-      }
-      ws.send(JSON.stringify({ type: 'ready', 'ships': ships }));
+      ws.send(JSON.stringify({ type: 'ready' }));
     }
   };
 
@@ -154,25 +209,28 @@ const Lobby: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (!initialized.current) {
-      const savedShips = localStorage.getItem('ships');
-      let parsedShips = null;
-      if (savedShips) {
-        try {
-          parsedShips = JSON.parse(savedShips);
-        } catch (e) {
-          console.error('Error parsing savedShips from localStorage, click "randomize to get a new set of ships":', e);
-        }
-      }
-      if (Array.isArray(parsedShips) && parsedShips.length > 0) {
-        setShips(parsedShips);
-      } else {
-        randomizeShips();
-      }
-      initialized.current = true;
+  const requestRematch = () => {
+    if (ws) {
+      ws.send(JSON.stringify({ type: 'rematch' }));
     }
-  }, [ws]);
+  };
+
+  // leaving just navigates away: closing the page closes the socket, and the
+  // other player is told through the usual disconnection message
+  const leaveGame = () => {
+    window.location.href = '/';
+  };
+
+  if (connectionError) {
+    return (
+      <div className='lobby-container'>
+        <div className='connection-error'>
+          <p>{connectionError}</p>
+          <Button variant='contained' onClick={leaveGame}>Back to home</Button>
+        </div>
+      </div>
+    );
+  }
 
   // no guest identity on this device yet: ask for a name before anything else,
   // and send whoever refuses back to the home page
@@ -188,38 +246,71 @@ const Lobby: React.FC = () => {
     );
   }
 
+  // only the phase-specific part changes: the chat and the way out are always
+  // there, so they live outside the switch
+  let phaseContent;
   switch (phase) {
     case 'setup':
-      return (
-        <div className='lobby-container'>
-          <SetupGame ships={ships} randomizeShips={randomizeShips} setAsReady={setAsReady} />
-          <ChatLog messages={messages} message={message} setMessage={setMessage} sendMessage={sendMessage} />
-        </div>
+      phaseContent = (
+        <SetupGame
+          ships={ships}
+          randomizeShips={randomizeShips}
+          setAsReady={setAsReady}
+          youReady={youReady}
+          opponentReady={opponentReady}
+        />
       );
+      break;
     case 'game':
     case 'finished':
-      return (
-        <div className='lobby-container'>
-          <Game
-            yourShips={yourShips}
-            isPlayerTurn={isPlayerTurn}
-            shotsFired={shotsFired}
-            shotsReceived={shotsReceived}
-            handleCellClick={handleCellClick}
-            gameOver={gameOver}
-            youWon={youWon}
-          />
-          <ChatLog messages={messages} message={message} setMessage={setMessage} sendMessage={sendMessage} />
-        </div>
+      phaseContent = (
+        <Game
+          yourShips={yourShips}
+          isPlayerTurn={isPlayerTurn}
+          shotsFired={shotsFired}
+          shotsReceived={shotsReceived}
+          handleCellClick={handleCellClick}
+          gameOver={gameOver}
+          youWon={youWon}
+          sunkMessage={sunkMessage}
+          enemySunk={enemySunk}
+          onRematch={requestRematch}
+          onLeave={leaveGame}
+        />
       );
+      break;
     default:
-      return (
-        <div className='lobby-container'>
-          <Waiting />
-          <ChatLog messages={messages} message={message} setMessage={setMessage} sendMessage={sendMessage} />
-        </div>
-      );
+      phaseContent = <Waiting />;
   }
+
+  return (
+    <div className='lobby-page'>
+      {connectionLost && (
+        <div className='connection-lost'>
+          <span>Connection lost.</span>
+          {/* reloading is enough: the server restores the whole game state */}
+          <Button size='small' variant='contained' onClick={() => window.location.reload()}>
+            Reconnect
+          </Button>
+        </div>
+      )}
+      <div className='lobby-topbar'>
+        {/* color inherit: leaving is a way out, not the action we want to push */}
+        <Button
+          size='small'
+          color='inherit'
+          startIcon={<MeetingRoomIcon />}
+          onClick={leaveGame}
+        >
+          Leave room
+        </Button>
+      </div>
+      <div className='lobby-container'>
+        {phaseContent}
+        <ChatLog messages={messages} message={message} setMessage={setMessage} sendMessage={sendMessage} />
+      </div>
+    </div>
+  );
 };
 
 export default Lobby;

@@ -8,6 +8,44 @@
     box-sizing: border-box;
 }
 
+.lobby-page {
+    display: flex;
+    flex-direction: column;
+}
+
+/* muted grey that wakes up on hover: present, but never the loudest thing
+   on screen. The button inherits this colour (color="inherit"). */
+.lobby-topbar {
+    display: flex;
+    justify-content: flex-start;
+    padding: 0.5rem 1rem 0;
+    color: #8b8b96;
+}
+
+.lobby-topbar button:hover {
+    color: #ffca28;
+}
+
+.connection-lost {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0.6rem 1rem;
+    background-color: #5c1d1d;
+    color: #ffdad6;
+    font-weight: 500;
+}
+
+.connection-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 3rem 1rem;
+    font-size: 1.1rem;
+}
+
 @media (max-width: 900px) {
     .lobby-container {
         flex-direction: column;

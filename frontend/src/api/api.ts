@@ -2,15 +2,10 @@
 
 import axios from 'axios';
 
-// In production VITE_BACKEND_HOST is set at build time (e.g. api.example.com).
-// Without it we fall back to the address the page was opened at, which is what
-// makes the dev server reachable from a phone on the LAN: hardcoding
-// "localhost" would tell the phone to call itself.
-export const BACKEND_HOST =
-  import.meta.env.VITE_BACKEND_HOST || `${window.location.hostname}:8000`;
-
-const httpScheme = window.location.protocol === 'https:' ? 'https' : 'http';
-const BASE_URL = `${httpScheme}://${BACKEND_HOST}/api`;
+// Same origin as the page. In development Vite forwards /api to Django (see
+// vite.config.ts), in production a reverse proxy does the same job: either way
+// the browser only ever talks to one host, so there is nothing to configure.
+const BASE_URL = '/api';
 
 // Axios instance with base URL
 const api = axios.create({
@@ -52,6 +47,9 @@ export const createRoom = async () => {
       const response = await api.post('/create-room/', {});
       return response.data;
     } catch (error) {
+      // log the real one before replacing it with a friendly message: without
+      // this, a refused connection and a 500 look identical from the outside
+      console.error('createRoom failed:', error);
       throw new Error('Failed to create room.');
     }
   };

@@ -7,7 +7,48 @@
 }
 
 #game-info {
+    width: 100%;
     min-height: 2.5rem;
+    text-align: center;
+}
+
+#game-info p {
+    margin: 0.5rem 0;
+}
+
+.turn {
+    font-size: 1.35rem;
+    font-weight: 600;
+    /* replayed on every turn change thanks to the key in Game.tsx */
+    animation: turn-in 320ms ease-out;
+}
+
+/* amber = it is on you, same colour the server uses to talk in the chat */
+.turn-yours {
+    color: #ffca28;
+}
+
+.turn-theirs {
+    color: #9e9e9e;
+    font-weight: 400;
+}
+
+@keyframes turn-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* the board you are allowed to shoot at is framed, so there is no doubt */
+.board-active {
+    outline: 2px solid #ffca28;
+    outline-offset: 4px;
+    box-shadow: 0 0 14px rgba(255, 202, 40, 0.3);
 }
 
 #gameboards-container {
@@ -69,9 +110,48 @@
     background-color: whitesmoke;
 }
 
+.sunk-slot {
+    min-height: 1.5rem;
+}
+
+.sunk-message {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    animation: turn-in 320ms ease-out;
+}
+
+.sunk-theirs {
+    color: #66bb6a;
+}
+
+.sunk-yours {
+    color: #ef5350;
+}
+
+.setup-status {
+    color: #9e9e9e;
+    font-size: 0.95rem;
+}
+
+.end-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.end-menu-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
 .result {
     font-size: 1.4rem;
     font-weight: 600;
+    margin: 0;
 }
 
 .result-won {
@@ -85,6 +165,19 @@
 .ship-cell {
     width: 100%;
     height: 100%;
+}
+
+/* a ship of yours that is gone: still recognisable, visibly out of the game */
+.ship-sunk {
+    opacity: 0.35;
+}
+
+/* on the enemy board a sunk ship stops being a secret, so it shows up in its
+   own colour, faded enough not to compete with the pegs on top of it */
+.sunk-reveal {
+    position: absolute;
+    inset: 0;
+    opacity: 0.4;
 }
 
 /* Ship colors */
@@ -123,5 +216,16 @@
 
     .game-board {
         --cell-size: min(2rem, 8vw);
+    }
+
+    /* with the boards stacked you scroll, so the turn has to follow you up top.
+       It needs its own background, otherwise the boards show through it. */
+    #game-info {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        padding: 0.25rem 0;
+        background-color: #242424;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
     }
 }

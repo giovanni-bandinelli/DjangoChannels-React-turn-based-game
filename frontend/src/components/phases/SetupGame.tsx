@@ -15,9 +15,17 @@ interface SetupGameProps {
   ships: Ship[];
   randomizeShips: () => void;
   setAsReady: () => void;
+  youReady: boolean;
+  opponentReady: boolean;
 }
 
-const SetupGame: React.FC<SetupGameProps> = ({ ships, randomizeShips, setAsReady}) => {
+const SetupGame: React.FC<SetupGameProps> = ({
+  ships,
+  randomizeShips,
+  setAsReady,
+  youReady,
+  opponentReady,
+}) => {
   const initialBoard = Array.from({ length: 10 }, () => Array(10).fill(null));
 
   const [playerBoard, setPlayerBoard] = useState(initialBoard);
@@ -46,6 +54,13 @@ const SetupGame: React.FC<SetupGameProps> = ({ ships, randomizeShips, setAsReady
     <div id="battleship-game-container">
       <div id="game-info">
         <p>Setup phase</p>
+        <p className="setup-status">
+          {youReady
+            ? (opponentReady ? 'Starting...' : 'Waiting for your opponent...')
+            : (opponentReady
+                ? 'Your opponent is ready.'
+                : 'Place your fleet, then press Ready.')}
+        </p>
       </div>
       <div id="gameboards-container">
         <div className="game-board" id="player-board">
@@ -60,9 +75,26 @@ const SetupGame: React.FC<SetupGameProps> = ({ ships, randomizeShips, setAsReady
           ))}
         </div>
       </div>
+      {/* once you are ready the layout is locked server side, so both buttons
+          stop being actionable and say so */}
       <div className='setup-buttons-container'>
-        <Button id="randomize-button" onClick={randomizeShips} variant="contained" startIcon={<DiceIcon />}>Randomize</Button>
-        <Button id="start-button" onClick={setAsReady} variant="contained">Ready</Button>
+        <Button
+          id="randomize-button"
+          onClick={randomizeShips}
+          variant="contained"
+          startIcon={<DiceIcon />}
+          disabled={youReady}
+        >
+          Randomize
+        </Button>
+        <Button
+          id="start-button"
+          onClick={setAsReady}
+          variant={youReady ? 'outlined' : 'contained'}
+          disabled={youReady}
+        >
+          {youReady ? 'Ready ✓' : 'Ready'}
+        </Button>
       </div>
     </div>
   );

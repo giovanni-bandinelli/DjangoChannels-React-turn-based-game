@@ -27,10 +27,15 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose, onLoginSuccess
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>Login</DialogTitle>
       <DialogContent>
+        {/* margin="normal": DialogContent drops its top padding when it follows
+            a DialogTitle, so a field placed first has the shrunk label sitting
+            outside the content box, where overflow-y: auto clips it.
+            See mui/material-ui#31185 */}
         <TextField
           label="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
+          margin="normal"
           fullWidth
         />
       </DialogContent>
