@@ -88,6 +88,12 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
                                    else room.player1_ready),
             }))
 
+            # reloading the page while the bot was mid-streak killed the task
+            # that was driving it: nobody would ever hand it its turn again
+            if (self.room.vs_bot and self.room.current_turn == BOT_ID
+                    and self.room.lobby_phase == 'game'):
+                self.start_bot_turn()
+
             msg = f'{self.username} has joined the room'
             await self.store_chat_message('Server', msg)
             await self.channel_layer.group_send(
@@ -105,6 +111,11 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
             await self.close(code=4002)
 
     async def disconnect(self, close_code):
+        # no point in the bot playing on against an empty room
+        bot_task = getattr(self, 'bot_task', None)
+        if bot_task and not bot_task.done():
+            bot_task.cancel()
+
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
@@ -307,9 +318,20 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
             }))
 
     async def handle_shot(self, x, y):
-        fired = await self.apply_shot(self.guest_id, x, y)
-        if fired:
-            await self.play_bot_turn()
+        if await self.apply_shot(self.guest_id, x, y):
+            self.start_bot_turn()
+
+    def start_bot_turn(self):
+        """Runs the bot outside receive(), in a task of its own.
+
+        A consumer dispatches one message at a time: playing the bot inside the
+        handler means its shot results queue up behind the very handler that is
+        producing them, and the whole streak lands on screen at the end.
+        """
+        running = getattr(self, 'bot_task', None)
+        if running and not running.done():
+            return
+        self.bot_task = asyncio.create_task(self.play_bot_turn())
 
     async def apply_shot(self, shooter, x, y):
         """One shot, whoever fires it. Returns False if it was not allowed.
@@ -377,12 +399,19 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
         The bot has no socket of its own, so nobody would ever deliver its turn
         to it: whoever moved last drives it from the server side.
         """
-        while self.room.vs_bot and self.room.current_turn == BOT_ID \
-                and self.room.lobby_phase == 'game':
-            shots = self.room.player2_shots_fired or []
+        while True:
+            # re-read every round instead of trusting self.room: another
+            # message (a chat line, say) may have refreshed it underneath us
+            room = await sync_to_async(GameRoom.objects.get)(
+                room_name=self.room_group_name)
+            if not (room.vs_bot and room.current_turn == BOT_ID
+                    and room.lobby_phase == 'game'):
+                return
+
+            shots = room.player2_shots_fired or []
             # it is told which ships it has already finished, exactly like a
             # human opponent would be
-            sunk = sunk_cells_of(self.room.player1_ships or [], shots)
+            sunk = sunk_cells_of(room.player1_ships or [], shots)
 
             move = bot_next_shot(shots, sunk_cells=sunk)
             if move is None:
