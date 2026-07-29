@@ -8,6 +8,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated 
 from rest_framework import status
 from .models import GameRoom
+from .game import random_fleet
+
+BOT_ID = 'BOT'
 
 class GuestLoginView(APIView):
     def post(self, request):
@@ -34,7 +37,22 @@ class CreateRoomView(APIView):
         username = payload.get('username')
         if username:
             room_name = uuid.uuid4()  # Generate a random UUID for the room name
-            room = GameRoom.objects.create(room_name=room_name)
+            vs_bot = bool(request.data.get('vs_bot'))
+
+            if vs_bot:
+                # the bot takes the second seat straight away: it has its fleet
+                # and it is already ready, so the room opens in the setup phase
+                room = GameRoom.objects.create(
+                    room_name=room_name,
+                    vs_bot=True,
+                    player2=BOT_ID,
+                    player2_ships=random_fleet(),
+                    player2_ready=True,
+                    lobby_phase='setup',
+                )
+            else:
+                room = GameRoom.objects.create(room_name=room_name)
+
             return Response({"room_name": str(room_name)}, status=status.HTTP_201_CREATED)
         return Response("token missing", status=status.HTTP_400_BAD_REQUEST)
 

@@ -3,3 +3,11 @@
   padding: 0;
   text-align: center;
 }
+
+.home-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}

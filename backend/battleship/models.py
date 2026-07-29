@@ -5,6 +5,7 @@ class GameRoom(models.Model):
 
     room_name = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    vs_bot = models.BooleanField(default=False)  # player2 is the computer
     game_started = models.BooleanField(default=False)
     chat_history = models.JSONField(null=True, blank=True)
     lobby_phase = models.CharField(max_length=50, default='waiting')

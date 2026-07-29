@@ -42,9 +42,9 @@ export const guestLogin = async (username: string) => {
 // Function to create a game room.
 // No body and no headers: the room has nothing to configure yet, and the
 // Authorization header is already added by the interceptor above.
-export const createRoom = async () => {
+export const createRoom = async (vsBot = false) => {
     try {
-      const response = await api.post('/create-room/', {});
+      const response = await api.post('/create-room/', { vs_bot: vsBot });
       return response.data;
     } catch (error) {
       // log the real one before replacing it with a friendly message: without

@@ -1,9 +1,13 @@
-import json, jwt, uuid, random
+import asyncio, json, jwt, uuid
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
 from asgiref.sync import sync_to_async
 from .models import GameRoom
-from .game import find_hit_ship, all_ships_sunk
+from .game import (find_hit_ship, all_ships_sunk, random_fleet,
+                   bot_next_shot, sunk_cells_of)
+
+BOT_ID = 'BOT'
+BOT_THINKING_SECONDS = 0.7  # otherwise its whole streak lands in one blink
 
 class BattleshipConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -283,7 +287,7 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
         if is_ready:
             return
 
-        ships = self.randomize_ships()
+        ships = random_fleet()
         setattr(self.room, field, ships)
         await sync_to_async(self.room.save)(update_fields=[field])
 
@@ -303,12 +307,23 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
             }))
 
     async def handle_shot(self, x, y):
+        fired = await self.apply_shot(self.guest_id, x, y)
+        if fired:
+            await self.play_bot_turn()
+
+    async def apply_shot(self, shooter, x, y):
+        """One shot, whoever fires it. Returns False if it was not allowed.
+
+        Human and bot go through here on purpose: two copies of the turn rules
+        would eventually disagree, and the bot would end up playing a slightly
+        different game from the one you are playing.
+        """
         self.room = await sync_to_async(GameRoom.objects.get)(room_name=self.room_group_name)
 
-        if self.room.lobby_phase != 'game' or self.room.current_turn != self.guest_id:
-            return
+        if self.room.lobby_phase != 'game' or self.room.current_turn != shooter:
+            return False
 
-        if self.room.player1 == self.guest_id:
+        if self.room.player1 == shooter:
             shots_field = 'player1_shots_fired'
             enemy_ships, opponent = self.room.player2_ships, self.room.player2
         else:
@@ -318,7 +333,7 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
         shots = getattr(self.room, shots_field) or []
         # same cell twice is ignored: a repeated hit would otherwise grant endless turns
         if any(shot['x'] == x and shot['y'] == y for shot in shots):
-            return
+            return False
 
         enemy_ships = enemy_ships or []
         ship = find_hit_ship(enemy_ships, x, y)
@@ -333,7 +348,7 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
         if not hit:
             self.room.current_turn = opponent
 
-        winner = self.guest_id if all_ships_sunk(enemy_ships, shots) else None
+        winner = shooter if all_ships_sunk(enemy_ships, shots) else None
         if winner:
             self.room.lobby_phase = 'finished'
 
@@ -345,7 +360,7 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             {
                 'type': 'shot_result',
-                'shooter': self.guest_id,
+                'shooter': shooter,
                 'x': x,
                 'y': y,
                 'hit': hit,
@@ -354,6 +369,28 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
                 'winner': winner,
             }
         )
+        return True
+
+    async def play_bot_turn(self):
+        """Fires for the bot until it misses or wins.
+
+        The bot has no socket of its own, so nobody would ever deliver its turn
+        to it: whoever moved last drives it from the server side.
+        """
+        while self.room.vs_bot and self.room.current_turn == BOT_ID \
+                and self.room.lobby_phase == 'game':
+            shots = self.room.player2_shots_fired or []
+            # it is told which ships it has already finished, exactly like a
+            # human opponent would be
+            sunk = sunk_cells_of(self.room.player1_ships or [], shots)
+
+            move = bot_next_shot(shots, sunk_cells=sunk)
+            if move is None:
+                return
+
+            await asyncio.sleep(BOT_THINKING_SECONDS)  # let the shot be seen
+            if not await self.apply_shot(BOT_ID, move['x'], move['y']):
+                return
 
     async def handle_rematch(self):
         """Puts the room back to the setup phase, keeping the same two players."""
@@ -366,12 +403,18 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
 
         self.room.lobby_phase = 'setup'
         self.room.player1_ships = None
-        self.room.player2_ships = None
         self.room.player1_ready = False
-        self.room.player2_ready = False
         self.room.player1_shots_fired = None
         self.room.player2_shots_fired = None
         self.room.current_turn = self.room.player1
+
+        if self.room.vs_bot:
+            # the bot cannot press anything: it re-deploys and is ready again
+            self.room.player2_ships = random_fleet()
+            self.room.player2_ready = True
+        else:
+            self.room.player2_ships = None
+            self.room.player2_ready = False
 
         await sync_to_async(self.room.save)(update_fields=[
             'lobby_phase', 'player1_ships', 'player2_ships',
@@ -399,37 +442,3 @@ class BattleshipConsumer(AsyncWebsocketConsumer):
             'you_won': event['winner'] == self.guest_id,
         }))
 
-    def randomize_ships(self):
-        ship_types = [
-            {'type': 'Carrier', 'size': 5},
-            {'type': 'Battleship', 'size': 4},
-            {'type': 'Cruiser', 'size': 3},
-            {'type': 'Submarine', 'size': 3},
-            {'type': 'Destroyer', 'size': 2}
-        ]
-
-        def is_valid_placement(board, coordinates):
-            return all(0 <= x < 10 and 0 <= y < 10 and not board[x][y] for x, y in coordinates)
-
-        board = [[None for _ in range(10)] for _ in range(10)]
-        ships = []
-
-        for ship in ship_types:
-            placed = False
-            while not placed:
-                is_vertical = random.choice([True, False])
-                if is_vertical:
-                    x = random.randint(0, 10 - ship['size'])
-                    y = random.randint(0, 9)
-                    coordinates = [(x + i, y) for i in range(ship['size'])]
-                else:
-                    x = random.randint(0, 9)
-                    y = random.randint(0, 10 - ship['size'])
-                    coordinates = [(x, y + i) for i in range(ship['size'])]
-
-                if is_valid_placement(board, coordinates):
-                    for x, y in coordinates:
-                        board[x][y] = ship['type']
-                    ships.append({'type': ship['type'], 'size': ship['size'], 'coordinates': [{'x': x, 'y': y} for x, y in coordinates]})
-                    placed = True
-        return ships
